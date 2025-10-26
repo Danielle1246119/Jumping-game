@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jumping Game</title>
+    <style>
+        body {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Arial', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        html {
+            height: 100%;
+        }
+
+        .game-container {
+            width: 800px;
+            height: 400px;
+            background: linear-gradient(to bottom, #87CEEB 0%, #98FB98 100%);
+            border: 4px solid #333;
+            border-radius: 10px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+
+        .player {
+            width: 40px;
+            height: 40px;
+            background: #FF6B6B;
+            border-radius: 50%;
+            position: absolute;
+            bottom: 60px;
+            left: 100px;
+            transition: none;
+            border: 3px solid #FF4757;
+            box-shadow: 0 2px 10px rgba(255, 107, 107, 0.4);
+        }
+
+        .player.jumping {
+            animation: jump 0.6s ease-in-out;
+        }
+
+        @keyframes jump {
+            0% { bottom: 60px; }
+            50% { bottom: 200px; }
+            100% { bottom: 60px; }
+        }
+
+        .obstacle {
+            width: 30px;
+            height: 60px;
+            background: #2C3E50;
+            position: absolute;
+            bottom: 60px;
+            right: -30px;
+            border-radius: 5px 5px 0 0;
+            box-shadow: 0 2px 10px rgba(44, 62, 80, 0.4);
+        }
+
+        .ground {
+            width: 100%;
+            height: 60px;
+            background: #8B4513;
+            position: absolute;
+            bottom: 0;
+            border-top: 3px solid #654321;
+        }
+
+        .cloud {
+            width: 60px;
+            height: 30px;
+            background: white;
+            border-radius: 50px;
+            position: absolute;
+            opacity: 0.8;
+        }
+
+        .cloud:before {
+            content: '';
+            width: 40px;
+            height: 40px;
+            background: white;
+            border-radius: 50%;
+            position: absolute;
+            top: -20px;
+            left: 10px;
+        }
+
+        .cloud:after {
+            content: '';
+            width: 30px;
+            height: 30px;
+            background: white;
+            border-radius: 50%;
+            position: absolute;
+            top: -15px;
+            right: 10px;
+        }
+
+        .score {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: #333;
+            font-size: 24px;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(255,255,255,0.8);
+        }
+
+        .game-over {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255,255,255,0.95);
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            display: none;
+        }
+
+        .game-over h2 {
+            color: #FF6B6B;
+            margin: 0 0 15px 0;
+            font-size: 28px;
+        }
+
+        .game-over p {
+            color: #333;
+            margin: 10px 0;
+            font-size: 18px;
+        }
+
+        .restart-btn {
+            background: #4ECDC4;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-top: 15px;
+            transition: background 0.3s ease;
+        }
+
+        .restart-btn:hover {
+            background: #45B7B8;
+        }
+
+        .instructions {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            color: #333;
+            font-size: 14px;
+            text-shadow: 1px 1px 2px rgba(255,255,255,0.8);
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container" id="gameContainer">
+        <div class="score" id="score">Score: 0</div>
+        
+        <div class="cloud" style="top: 50px; right: 200px; animation: moveCloud 15s linear infinite;"></div>
+        <div class="cloud" style="top: 80px; right: 400px; animation: moveCloud 20s linear infinite;"></div>
+        
+        <div class="player" id="player"></div>
+        <div class="ground"></div>
+        
+        <div class="game-over" id="gameOver">
+            <h2>Game Over!</h2>
+            <p>Your Score: <span id="finalScore">0</span></p>
+            <p>Great jumping! Try to beat your record!</p>
+            <button class="restart-btn" onclick="restartGame()">Play Again</button>
+        </div>
+        
+        <div class="instructions">
+            Press SPACEBAR or click to jump!
+        </div>
+    </div>
+
+    <style>
+        @keyframes moveCloud {
+            from { transform: translateX(0); }
+            to { transform: translateX(-900px); }
+        }
+        
+        @keyframes moveObstacle {
+            from { right: -30px; }
+            to { right: 830px; }
+        }
+    </style>
+
+    <script>
+        let gameRunning = true;
+        let score = 0;
+        let obstacles = [];
+        let gameSpeed = 2000;
+        let obstacleInterval;
+        let gameLoop;
+
+        const player = document.getElementById('player');
+        const gameContainer = document.getElementById('gameContainer');
+        const scoreElement = document.getElementById('score');
+        const gameOverScreen = document.getElementById('gameOver');
+        const finalScoreElement = document.getElementById('finalScore');
+
+        let isJumping = false;
+
+        function jump() {
+            if (!isJumping && gameRunning) {
+                isJumping = true;
+                player.classList.add('jumping');
+                
+                setTimeout(() => {
+                    player.classList.remove('jumping');
+                    isJumping = false;
+                }, 600);
+            }
+        }
+
+        function createObstacle() {
+            if (!gameRunning) return;
+            
+            const obstacle = document.createElement('div');
+            obstacle.className = 'obstacle';
+            obstacle.style.animation = `moveObstacle ${gameSpeed}ms linear`;
+            gameContainer.appendChild(obstacle);
+            obstacles.push(obstacle);
+
+            setTimeout(() => {
+                if (obstacle.parentNode) {
+                    obstacle.parentNode.removeChild(obstacle);
+                }
+                obstacles = obstacles.filter(obs => obs !== obstacle);
+            }, gameSpeed);
+        }
+
+        function checkCollision() {
+            obstacles.forEach(obstacle => {
+                const obstacleRect = obstacle.getBoundingClientRect();
+                const playerRect = player.getBoundingClientRect();
+                const containerRect = gameContainer.getBoundingClientRect();
+
+                const obstacleLeft = obstacleRect.left - containerRect.left;
+                const obstacleRight = obstacleRect.right - containerRect.left;
+                const playerLeft = playerRect.left - containerRect.left;
+                const playerRight = playerRect.right - containerRect.left;
+                const playerBottom = playerRect.bottom - containerRect.top;
+
+                if (obstacleLeft < playerRight && 
+                    obstacleRight > playerLeft && 
+                    playerBottom > 340) {
+                    gameOver();
+                }
+            });
+        }
+
+        function updateScore() {
+            if (gameRunning) {
+                score += 1;
+                scoreElement.textContent = `Score: ${score}`;
+                
+                // Increase difficulty
+                if (score % 100 === 0 && gameSpeed > 1200) {
+                    gameSpeed -= 100;
+                    clearInterval(obstacleInterval);
+                    obstacleInterval = setInterval(createObstacle, gameSpeed);
+                }
+            }
+        }
+
+        function gameOver() {
+            gameRunning = false;
+            finalScoreElement.textContent = score;
+            gameOverScreen.style.display = 'block';
+            
+            clearInterval(obstacleInterval);
+            clearInterval(gameLoop);
+            
+            obstacles.forEach(obstacle => {
+                if (obstacle.parentNode) {
+                    obstacle.parentNode.removeChild(obstacle);
+                }
+            });
+            obstacles = [];
+        }
+
+        function restartGame() {
+            gameRunning = true;
+            score = 0;
+            gameSpeed = 2000;
+            scoreElement.textContent = 'Score: 0';
+            gameOverScreen.style.display = 'none';
+            
+            obstacles.forEach(obstacle => {
+                if (obstacle.parentNode) {
+                    obstacle.parentNode.removeChild(obstacle);
+                }
+            });
+            obstacles = [];
+            
+            startGame();
+        }
+
+        function startGame() {
+            obstacleInterval = setInterval(createObstacle, gameSpeed);
+            gameLoop = setInterval(() => {
+                checkCollision();
+                updateScore();
+            }, 50);
+        }
+
+        // Event listeners
+        document.addEventListener('keydown', (event) => {
+            if (event.code === 'Space') {
+                event.preventDefault();
+                jump();
+            }
+        });
+
+        gameContainer.addEventListener('click', jump);
+
+        // Start the game
+        startGame();
+    </script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'994992c71632f9bb',t:'MTc2MTQ3NzcyMC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
