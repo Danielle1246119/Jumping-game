@@ -1,7 +1,3 @@
-<html>
+# Jumping game
 
-<body>
-The folder above contains the code for this game as well as the screenshot. 
-</body>
-
-</html>
+This is my version of the jumping game. This was made with JavaScript. 
